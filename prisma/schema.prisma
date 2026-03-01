@@ -1,0 +1,155 @@
+// ─── Prisma Schema ───────────────────────────────────────────────────────────
+// AI Code Review Platform – Data Model
+// ─────────────────────────────────────────────────────────────────────────────
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ─── Users ───────────────────────────────────────────────────────────────────
+
+model User {
+  id             String    @id @default(uuid())
+  email          String    @unique
+  passwordHash   String    @map("password_hash")
+  name           String?
+  role           Role      @default(USER)
+  refreshToken   String?   @map("refresh_token")
+  lastLoginAt    DateTime? @map("last_login_at")
+  createdAt      DateTime  @default(now()) @map("created_at")
+  updatedAt      DateTime  @updatedAt @map("updated_at")
+
+  repositories   Repository[]
+  analyses       Analysis[]
+
+  @@map("users")
+}
+
+enum Role {
+  USER
+  ADMIN
+}
+
+// ─── Repositories ────────────────────────────────────────────────────────────
+
+model Repository {
+  id          String   @id @default(uuid())
+  name        String
+  url         String
+  branch      String   @default("main")
+  language    String?
+  localPath   String?  @map("local_path")
+  userId      String   @map("user_id")
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  analyses    Analysis[]
+
+  @@unique([userId, url])
+  @@index([userId])
+  @@map("repositories")
+}
+
+// ─── Analyses ────────────────────────────────────────────────────────────────
+
+model Analysis {
+  id               String          @id @default(uuid())
+  status           AnalysisStatus  @default(PENDING)
+  triggerType       TriggerType     @default(MANUAL)
+  language         String?
+  fileName         String?         @map("file_name")
+  sourceCode       String?         @map("source_code") @db.Text
+  commitSha        String?         @map("commit_sha")
+  diffContent      String?         @map("diff_content") @db.Text
+
+  // Computed results
+  complexityScore  Float?          @map("complexity_score")
+  securityScore    Float?          @map("security_score")
+  qualityScore     Float?          @map("quality_score")
+  overallScore     Float?          @map("overall_score")
+
+  resultJson       Json?           @map("result_json")
+  errorMessage     String?         @map("error_message")
+
+  processingTimeMs Int?            @map("processing_time_ms")
+  startedAt        DateTime?       @map("started_at")
+  completedAt      DateTime?       @map("completed_at")
+
+  userId           String          @map("user_id")
+  repositoryId     String?         @map("repository_id")
+  createdAt        DateTime        @default(now()) @map("created_at")
+  updatedAt        DateTime        @updatedAt @map("updated_at")
+
+  user             User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  repository       Repository?     @relation(fields: [repositoryId], references: [id], onDelete: SetNull)
+  findings         Finding[]
+
+  @@index([userId])
+  @@index([repositoryId])
+  @@index([status])
+  @@map("analyses")
+}
+
+enum AnalysisStatus {
+  PENDING
+  IN_PROGRESS
+  COMPLETED
+  FAILED
+}
+
+enum TriggerType {
+  MANUAL
+  PUSH
+  PULL_REQUEST
+  SCHEDULED
+}
+
+// ─── Findings (individual issues from analysis) ─────────────────────────────
+
+model Finding {
+  id                   String        @id @default(uuid())
+  category             FindingCategory
+  severity             Severity
+  title                String
+  description          String        @db.Text
+  technicalExplanation String?       @map("technical_explanation") @db.Text
+  recommendedFix       String?       @map("recommended_fix") @db.Text
+  lineNumber           Int?          @map("line_number")
+  filePath             String?       @map("file_path")
+  confidenceScore      Float?        @map("confidence_score")
+  analysisId           String        @map("analysis_id")
+  createdAt            DateTime      @default(now()) @map("created_at")
+
+  analysis             Analysis      @relation(fields: [analysisId], references: [id], onDelete: Cascade)
+
+  @@index([analysisId])
+  @@index([severity])
+  @@index([category])
+  @@map("findings")
+}
+
+enum FindingCategory {
+  LOGICAL_ERROR
+  EDGE_CASE
+  ARCHITECTURE
+  SECURITY
+  PERFORMANCE
+  CONCURRENCY
+  DATA_FLOW
+  PRODUCTION_HARDENING
+  REFACTORING
+}
+
+enum Severity {
+  INFO
+  LOW
+  MEDIUM
+  HIGH
+  CRITICAL
+}

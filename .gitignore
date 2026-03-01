@@ -1,0 +1,8 @@
+node_modules/
+dist/
+.env
+*.log
+tmp/
+coverage/
+.prisma/
+frontend/node_modules/
