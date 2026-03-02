@@ -40,7 +40,7 @@
 - **Multi-provider AI** — Google Gemini (free tier) or OpenAI GPT as fallback
 - **10-category semantic review** — logical errors, security risks, architecture weaknesses, performance, concurrency, data flow, edge cases, production hardening, and refactoring guidance
 - **Confidence scoring** — every finding includes an AI confidence score (0–1)
-- **Smart retry** — exponential backoff with automatic retry on rate limits
+- **Smart retryY** — exponential backoff with automatic retry on rate limits
 
 ### 🛡️ Multi-Layer Analysis Pipeline
 ```
